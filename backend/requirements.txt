@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pydantic
+pandas
+numpy
+scikit-learn
+python-dotenv
+passlib[argon2]
+argon2-cffi
+python-multipart
+python-jose[cryptography]
+email-validator

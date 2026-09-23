@@ -1,0 +1,185 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import func, desc
+from pydantic import BaseModel
+from typing import Optional
+from database import get_db
+from models import SecurityEvent
+from incident_models import Incident, IncidentNote
+
+router = APIRouter(prefix="/api/incidents", tags=["incidents"])
+
+
+def _derive_severity(attack_cat: str) -> str:
+    if attack_cat in ["Backdoor", "Shellcode", "Worms"]:
+        return "CRITICAL"
+    elif attack_cat in ["DoS", "Reconnaissance", "Exploits"]:
+        return "HIGH"
+    elif attack_cat in ["Generic", "Analysis", "Fuzzers"]:
+        return "MEDIUM"
+    return "LOW"
+
+
+@router.get("")
+def get_incidents(
+    status: Optional[str] = None,
+    severity: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns deterministic incident groupings based on (attack_cat, proto, service).
+    Creates/updates incident records on first access if they don't exist yet.
+    """
+    # Check if incidents table has been populated
+    existing_count = db.query(func.count(Incident.id)).scalar() or 0
+
+    if existing_count == 0:
+        # Generate incidents from actual data grouping
+        groups = db.query(
+            SecurityEvent.attack_cat,
+            SecurityEvent.proto,
+            SecurityEvent.service,
+            func.count(SecurityEvent.id).label("event_count")
+        ).filter(
+            SecurityEvent.label == 1,
+            SecurityEvent.attack_cat.isnot(None)
+        ).group_by(
+            SecurityEvent.attack_cat,
+            SecurityEvent.proto,
+            SecurityEvent.service
+        ).having(func.count(SecurityEvent.id) >= 5).all()
+
+        for g in groups:
+            incident = Incident(
+                threat_category=g.attack_cat,
+                protocol=g.proto,
+                service=g.service,
+                severity=_derive_severity(g.attack_cat),
+                status="Open",
+                event_count=g.event_count,
+            )
+            db.add(incident)
+        db.commit()
+
+    # Query incidents with optional filters
+    query = db.query(Incident)
+    if status:
+        query = query.filter(Incident.status == status)
+    if severity:
+        query = query.filter(Incident.severity == severity)
+
+    incidents = query.order_by(desc(Incident.event_count)).all()
+
+    return [
+        {
+            "id": inc.id,
+            "threat_category": inc.threat_category,
+            "protocol": inc.protocol,
+            "service": inc.service,
+            "severity": inc.severity,
+            "status": inc.status,
+            "event_count": inc.event_count,
+            "created_at": inc.created_at.isoformat() if inc.created_at else None,
+            "updated_at": inc.updated_at.isoformat() if inc.updated_at else None,
+            "notes_count": len(inc.notes) if inc.notes else 0,
+        }
+        for inc in incidents
+    ]
+
+
+@router.get("/{incident_id}")
+def get_incident(incident_id: int, db: Session = Depends(get_db)):
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    # Get related events
+    related = db.query(SecurityEvent).filter(
+        SecurityEvent.attack_cat == incident.threat_category,
+        SecurityEvent.proto == incident.protocol,
+        SecurityEvent.service == incident.service,
+        SecurityEvent.label == 1,
+    ).limit(50).all()
+
+    events = []
+    for e in related:
+        events.append({
+            "id": e.id,
+            "threat_type": e.attack_cat,
+            "protocol": e.proto,
+            "service": e.service,
+            "state": e.state,
+            "packets": (e.spkts or 0) + (e.dpkts or 0),
+            "bytes_transferred": (e.sbytes or 0) + (e.dbytes or 0),
+        })
+
+    notes = [
+        {
+            "id": n.id,
+            "content": n.content,
+            "author": n.author,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+        }
+        for n in (incident.notes or [])
+    ]
+
+    return {
+        "id": incident.id,
+        "threat_category": incident.threat_category,
+        "protocol": incident.protocol,
+        "service": incident.service,
+        "severity": incident.severity,
+        "status": incident.status,
+        "event_count": incident.event_count,
+        "created_at": incident.created_at.isoformat() if incident.created_at else None,
+        "updated_at": incident.updated_at.isoformat() if incident.updated_at else None,
+        "related_events": events,
+        "notes": notes,
+    }
+
+
+class StatusUpdate(BaseModel):
+    status: str  # Open, Investigating, Resolved
+
+
+@router.post("/{incident_id}/status")
+def update_incident_status(incident_id: int, body: StatusUpdate, db: Session = Depends(get_db)):
+    if body.status not in ["Open", "Investigating", "Resolved"]:
+        raise HTTPException(status_code=400, detail="Status must be Open, Investigating, or Resolved")
+
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    incident.status = body.status
+    db.commit()
+    db.refresh(incident)
+    return {"message": f"Incident {incident_id} status updated to {body.status}"}
+
+
+class NoteCreate(BaseModel):
+    content: str
+    author: str = "Analyst"
+
+
+@router.post("/{incident_id}/notes")
+def add_incident_note(incident_id: int, body: NoteCreate, db: Session = Depends(get_db)):
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    note = IncidentNote(
+        incident_id=incident_id,
+        content=body.content,
+        author=body.author,
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+
+    return {
+        "id": note.id,
+        "content": note.content,
+        "author": note.author,
+        "created_at": note.created_at.isoformat() if note.created_at else None,
+    }

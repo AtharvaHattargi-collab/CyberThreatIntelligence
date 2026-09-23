@@ -1,0 +1,16 @@
+@echo off
+TITLE CTI Starter
+set "PROJECT_ROOT=%~dp0"
+echo Starting Cyber Threat Intelligence...
+
+echo Starting Backend on port 8001...
+start "CTI Backend" cmd /k "cd /d "%PROJECT_ROOT%backend" && "%PROJECT_ROOT%backend\venv\Scripts\python.exe" -m uvicorn main:app --reload --port 8001"
+
+echo Starting Frontend on port 5173...
+start "CTI Frontend" cmd /k "cd /d "%PROJECT_ROOT%frontend" && npm.cmd run dev"
+
+echo Waiting 5 seconds for servers to start...
+timeout /t 5 /nobreak >nul
+
+echo Opening application in default browser...
+start http://localhost:5173
