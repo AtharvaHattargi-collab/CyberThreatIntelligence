@@ -43,7 +43,7 @@ export default function ModelPerformance() {
       name: cls === '0' ? 'Normal' : 'Anomaly',
       precision: metrics.precision * 100,
       recall: metrics.recall * 100,
-      f1: (metrics['f1-score'] || metrics.f1_score || 0) * 100
+      f1: ((metrics['f1-score'] ?? metrics.f1_score) || 0) * 100
     }));
 
   return (
@@ -59,7 +59,7 @@ export default function ModelPerformance() {
         <MetricCard label="Accuracy" value={(perf.accuracy * 100).toFixed(2)} suffix="%" icon={Target} />
         <MetricCard label="Precision (Macro)" value={(perf.classification_report['macro avg'].precision * 100).toFixed(2)} suffix="%" icon={Crosshair} />
         <MetricCard label="Recall (Macro)" value={(perf.classification_report['macro avg'].recall * 100).toFixed(2)} suffix="%" icon={Activity} />
-        <MetricCard label="F1 Score (Macro)" value={((perf.classification_report['macro avg']['f1-score'] || perf.classification_report['macro avg'].f1_score) * 100).toFixed(2)} suffix="%" icon={BarChart3} accent />
+        <MetricCard label="F1 Score (Macro)" value={(((perf.classification_report['macro avg']['f1-score'] ?? perf.classification_report['macro avg'].f1_score) || 0) * 100).toFixed(2)} suffix="%" icon={BarChart3} accent />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full min-w-0">
@@ -95,6 +95,7 @@ export default function ModelPerformance() {
               <YAxis stroke="#64748B" fontSize={11} domain={[0, 100]} tickFormatter={v => `${v}%`} />
               <Tooltip 
                 contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '8px', fontSize: '12px', padding: '8px 12px' }} 
+                itemStyle={{ color: 'var(--text-primary)' }}
                 cursor={{ fill: 'var(--surface-hover)' }}
                 formatter={v => [`${v.toFixed(2)}%`]}
               />
@@ -115,6 +116,7 @@ export default function ModelPerformance() {
               <YAxis dataKey="name" type="category" stroke="#64748B" fontSize={10} width={120} />
               <Tooltip 
                 contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '8px', fontSize: '12px', padding: '8px 12px' }} 
+                itemStyle={{ color: 'var(--text-primary)' }}
                 cursor={{ fill: 'var(--surface-hover)' }}
                 formatter={v => [`${v.toFixed(2)}%`, 'Importance']}
               />

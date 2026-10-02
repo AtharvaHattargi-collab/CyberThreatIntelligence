@@ -67,3 +67,27 @@ def change_password(req: PasswordChangeRequest, db: Session = Depends(get_db), c
     current_user.password_hash = get_password_hash(req.new_password)
     db.commit()
     return {"message": "Password updated successfully"}
+
+class UserRegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
+@router.post("/register")
+def register_user(req: UserRegisterRequest, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == req.username).first():
+        raise HTTPException(status_code=400, detail="Username already registered")
+    if db.query(User).filter(User.email == req.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+        
+    from auth_utils import get_password_hash
+    new_user = User(
+        username=req.username,
+        email=req.email,
+        password_hash=get_password_hash(req.password),
+        role="VIEWER",
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    return {"message": "User registered successfully"}

@@ -93,7 +93,7 @@ def ingest_dataset(filepath: str, dataset_source: str, db: Session, chunksize: i
                     event.ml_features = ml_feature
                     events_to_insert.append(event)
                 except Exception as e:
-                    logger.debug(f"Row parsing error: {e}")
+                    logger.error(f"ROW ERROR: {type(e).__name__}: {e}")
                     total_rejected += 1
                     continue
             

@@ -1,14 +1,14 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000') + '/api';
 
 const handleResponse = async (response) => {
-  if (response.status === 401) {
-    // Clear token if unauthorized and let React router redirect
-    localStorage.removeItem('auth_token');
-    window.dispatchEvent(new Event('auth:unauthorized'));
-    throw new Error('Unauthorized');
-  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      if (error.detail) throw new Error(error.detail);
+      localStorage.removeItem('auth_token');
+      window.dispatchEvent(new Event('auth:unauthorized'));
+      throw new Error('Invalid username or password.');
+    }
     throw new Error(error.detail || `HTTP Error ${response.status}`);
   }
   return response.json();
@@ -47,8 +47,15 @@ async function fetchAPI(endpoint, options = {}) {
     headers
   };
 
-  const response = await fetch(url, config);
-  return handleResponse(response);
+  try {
+    const response = await fetch(url, config);
+    return await handleResponse(response);
+  } catch (error) {
+    if (error.message === 'Failed to fetch' || error.message.includes('fetch')) {
+      throw new Error('Unable to connect to the API server.');
+    }
+    throw error;
+  }
 }
 
 export const authAPI = {
@@ -61,6 +68,10 @@ export const authAPI = {
       body: formData
     });
   },
+  register: (data) => fetchAPI('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
   getMe: () => fetchAPI('/auth/me')
 };
 
@@ -143,6 +154,14 @@ export const incidentsAPI = {
   createIncident: (data) => fetchAPI(`/incidents`, {
     method: 'POST', body: JSON.stringify(data)
   }),
+  uploadIncidentPdf: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchAPI('/incidents/upload', {
+      method: 'POST',
+      body: formData
+    });
+  },
   updateIncident: (id, data) => fetchAPI(`/incidents/${id}`, {
     method: 'PUT', body: JSON.stringify(data)
   }),

@@ -4,7 +4,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import Drawer from '../components/ui/Drawer';
 import EmptyState from '../components/ui/EmptyState';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
-import { AlertCircle, RefreshCw, Send, ShieldAlert, Activity, Filter, Layers } from 'lucide-react';
+import { AlertCircle, RefreshCw, Send, ShieldAlert, Activity, Filter, Layers, Plus, Upload } from 'lucide-react';
 
 export default function IncidentCenter() {
   const [loading, setLoading] = useState(true);
@@ -17,6 +17,12 @@ export default function IncidentCenter() {
   const [loadingIncident, setLoadingIncident] = useState(false);
   const [noteContent, setNoteContent] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+  const [addMode, setAddMode] = useState('manual');
+  const [newIncident, setNewIncident] = useState({ threat_category: '', severity: 'LOW' });
+  const [pdfFile, setPdfFile] = useState(null);
+  const [addingIncident, setAddingIncident] = useState(false);
 
   const fetchIncidents = useCallback(async () => {
     setLoading(true); setError(null);
@@ -28,6 +34,25 @@ export default function IncidentCenter() {
   }, [filters]);
 
   useEffect(() => { fetchIncidents(); }, [fetchIncidents]);
+
+  const handleAddIncident = async (e) => {
+    e.preventDefault();
+    setAddingIncident(true);
+    try {
+      if (addMode === 'manual') {
+        await incidentsAPI.createIncident(newIncident);
+      } else if (addMode === 'pdf' && pdfFile) {
+        await incidentsAPI.uploadIncidentPdf(pdfFile);
+      }
+      setAddDrawerOpen(false);
+      setNewIncident({ threat_category: '', severity: 'LOW' });
+      setPdfFile(null);
+      fetchIncidents();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setAddingIncident(false);
+  };
 
   const openIncident = async (id) => {
     setLoadingIncident(true);
@@ -62,10 +87,10 @@ export default function IncidentCenter() {
   };
 
   const groupedIncidents = {
-    CRITICAL: incidents.filter(i => i.severity === 'CRITICAL'),
-    HIGH: incidents.filter(i => i.severity === 'HIGH'),
-    MEDIUM: incidents.filter(i => i.severity === 'MEDIUM'),
-    LOW: incidents.filter(i => i.severity === 'LOW'),
+    CRITICAL: incidents.filter(i => i.severity === 'CRITICAL').slice(0, 15),
+    HIGH: incidents.filter(i => i.severity === 'HIGH').slice(0, 15),
+    MEDIUM: incidents.filter(i => i.severity === 'MEDIUM').slice(0, 15),
+    LOW: incidents.filter(i => i.severity === 'LOW').slice(0, 15),
   };
 
   const Section = ({ title, items, colorClass }) => {
@@ -124,6 +149,7 @@ export default function IncidentCenter() {
             <option value="Investigating">Investigating</option>
             <option value="Resolved">Resolved</option>
           </select>
+          <button onClick={() => setAddDrawerOpen(true)} className="btn-primary text-xs"><Plus size={14} /> Add Incident</button>
           <button onClick={fetchIncidents} className="btn-secondary text-xs"><RefreshCw size={14} /> Refresh</button>
         </div>
       </div>
@@ -234,6 +260,54 @@ export default function IncidentCenter() {
 
           </div>
         ) : null}
+      </Drawer>
+
+      <Drawer open={addDrawerOpen} onClose={() => setAddDrawerOpen(false)} title="Add New Incident" width="max-w-md">
+        <div className="space-y-6">
+          <div className="flex border-b border-border">
+            <button onClick={() => setAddMode('manual')} className={`flex-1 py-2 text-sm font-medium ${addMode === 'manual' ? 'text-primary border-b-2 border-primary' : 'text-text-secondary'}`}>Manual Entry</button>
+            <button onClick={() => setAddMode('pdf')} className={`flex-1 py-2 text-sm font-medium ${addMode === 'pdf' ? 'text-primary border-b-2 border-primary' : 'text-text-secondary'}`}>Upload PDF</button>
+          </div>
+          
+          <form onSubmit={handleAddIncident} className="space-y-4">
+            {addMode === 'manual' ? (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">Threat Category</label>
+                  <input required type="text" value={newIncident.threat_category} onChange={e => setNewIncident({...newIncident, threat_category: e.target.value})} className="input w-full" placeholder="e.g. DoS, Backdoor" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">Severity</label>
+                  <select value={newIncident.severity} onChange={e => setNewIncident({...newIncident, severity: e.target.value})} className="input w-full">
+                    <option value="LOW">LOW</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              <div>
+                 <label className="block text-xs font-semibold text-text-secondary mb-1">Upload PDF Report</label>
+                 <div className="border-2 border-dashed border-border p-6 rounded-lg text-center bg-surface-hover/50">
+                    <input type="file" accept=".pdf" onChange={e => setPdfFile(e.target.files[0])} className="hidden" id="pdf-upload" />
+                    <label htmlFor="pdf-upload" className="cursor-pointer flex flex-col items-center">
+                       <Upload size={24} className="text-text-muted mb-2" />
+                       <span className="text-sm font-medium text-text-primary">{pdfFile ? pdfFile.name : 'Click to upload or drag and drop'}</span>
+                       <span className="text-xs text-text-muted mt-1">PDF up to 10MB</span>
+                    </label>
+                 </div>
+              </div>
+            )}
+            
+            <div className="pt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setAddDrawerOpen(false)} className="btn-secondary text-sm">Cancel</button>
+              <button type="submit" disabled={addingIncident || (addMode==='pdf' && !pdfFile) || (addMode==='manual' && !newIncident.threat_category)} className="btn-primary text-sm">
+                {addingIncident ? 'Saving...' : 'Add Incident'}
+              </button>
+            </div>
+          </form>
+        </div>
       </Drawer>
     </div>
   );

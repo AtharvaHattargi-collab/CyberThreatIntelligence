@@ -44,7 +44,7 @@ export default function ThreatAnalytics() {
               <CartesianGrid strokeDasharray="3 3" stroke="#1D2733" vertical={false} />
               <XAxis dataKey="category" stroke="#64748B" angle={-45} textAnchor="end" interval={0} fontSize={11} tickMargin={5} />
               <YAxis stroke="#64748B" fontSize={11} tickFormatter={v => v>1000?`${(v/1000).toFixed(0)}k`:v} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{fill:'var(--surface-hover)'}} formatter={v=>[v.toLocaleString(),'Count']} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} cursor={{fill:'var(--surface-hover)'}} formatter={v=>[v.toLocaleString(),'Count']} />
               <Bar dataKey="count" radius={[4,4,0,0]} maxBarSize={50}>
                 {threats.map((e,i) => <Cell key={i} fill={THREAT_COLORS[e.category]||'#64748B'} />)}
               </Bar>
@@ -58,7 +58,7 @@ export default function ThreatAnalytics() {
               <CartesianGrid strokeDasharray="3 3" stroke="#1D2733" horizontal={false} />
               <XAxis type="number" stroke="#64748B" fontSize={11} tickFormatter={v=>v>1000?`${(v/1000).toFixed(0)}k`:v} />
               <YAxis dataKey="severity" type="category" stroke="#64748B" width={65} fontSize={11} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{fill:'var(--surface-hover)'}} formatter={v=>[v.toLocaleString(),'Events']} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} cursor={{fill:'var(--surface-hover)'}} formatter={v=>[v.toLocaleString(),'Events']} />
               <Bar dataKey="count" radius={[0,4,4,0]} barSize={30}>
                 {severity.map((e,i) => <Cell key={i} fill={SEVERITY_COLORS[e.severity]||'#64748B'} />)}
               </Bar>

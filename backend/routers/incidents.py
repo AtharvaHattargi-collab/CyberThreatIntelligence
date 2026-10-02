@@ -1,9 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, desc
 from pydantic import BaseModel
 from typing import Optional
 from database import get_db
+from fastapi import UploadFile, File
+import io
+try:
+    import PyPDF2
+except ImportError:
+    pass
 from models import SecurityEvent
 from incident_models import Incident, IncidentNote
 
@@ -68,7 +74,7 @@ def get_incidents(
     if severity:
         query = query.filter(Incident.severity == severity)
 
-    incidents = query.order_by(desc(Incident.event_count)).all()
+    incidents = query.options(selectinload(Incident.notes)).order_by(desc(Incident.event_count)).limit(100).all()
 
     return [
         {
@@ -140,6 +146,83 @@ def get_incident(incident_id: int, db: Session = Depends(get_db)):
 
 class StatusUpdate(BaseModel):
     status: str  # Open, Investigating, Resolved
+
+
+class IncidentCreate(BaseModel):
+    threat_category: str
+    protocol: Optional[str] = "-"
+    service: Optional[str] = "-"
+    severity: str
+    event_count: Optional[int] = 1
+    status: Optional[str] = "Open"
+
+
+@router.post("")
+def create_incident(body: IncidentCreate, db: Session = Depends(get_db)):
+    incident = Incident(
+        threat_category=body.threat_category,
+        protocol=body.protocol,
+        service=body.service,
+        severity=body.severity,
+        status=body.status,
+        event_count=body.event_count,
+    )
+    db.add(incident)
+    db.commit()
+    db.refresh(incident)
+    return incident
+
+
+@router.post("/upload")
+async def upload_incident_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    try:
+        content = await file.read()
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        
+        # Super simple parser - look for keywords in text
+        threat_cat = "PDF Upload"
+        severity = "MEDIUM"
+        
+        lower_text = text.lower()
+        if "ddos" in lower_text or "denial" in lower_text:
+            threat_cat = "DoS"
+            severity = "HIGH"
+        elif "malware" in lower_text or "virus" in lower_text or "backdoor" in lower_text:
+            threat_cat = "Backdoor"
+            severity = "CRITICAL"
+        elif "exploit" in lower_text:
+            threat_cat = "Exploits"
+            severity = "HIGH"
+        
+        incident = Incident(
+            threat_category=threat_cat,
+            protocol="-",
+            service="-",
+            severity=severity,
+            status="Open",
+            event_count=1,
+        )
+        db.add(incident)
+        db.commit()
+        db.refresh(incident)
+        
+        # Add the extracted text as a note
+        note = IncidentNote(
+            incident_id=incident.id,
+            content=f"Incident generated from PDF '{file.filename}'.\nExtracted content snippet:\n{text[:300]}...",
+            author="System"
+        )
+        db.add(note)
+        db.commit()
+        
+        return incident
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error processing PDF: {str(e)}")
 
 
 @router.post("/{incident_id}/status")

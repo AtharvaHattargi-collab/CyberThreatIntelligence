@@ -55,7 +55,7 @@ export default function NetworkAnalytics() {
               <CartesianGrid strokeDasharray="3 3" stroke="#1D2733" vertical={false} />
               <XAxis dataKey="service" stroke="#64748B" angle={-45} textAnchor="end" interval={0} fontSize={11} tickMargin={5} />
               <YAxis stroke="#64748B" fontSize={11} tickFormatter={v=>v>1000?`${(v/1000).toFixed(0)}k`:v} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{fill:'var(--surface-hover)'}} formatter={v=>[v.toLocaleString(),'Flows']} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} cursor={{fill:'var(--surface-hover)'}} formatter={v=>[v.toLocaleString(),'Flows']} />
               <Bar dataKey="count" radius={[4,4,0,0]} maxBarSize={45}>
                 {services.map((_,i) => <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
               </Bar>
@@ -69,7 +69,7 @@ export default function NetworkAnalytics() {
               <Pie data={byteData} cx="50%" cy="50%" innerRadius={65} outerRadius={105} paddingAngle={2} dataKey="value" stroke="none">
                 <Cell fill="#3B82F6" /><Cell fill="#10B981" />
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={v => [(v/1024/1024/1024).toFixed(2)+' GB','Volume']} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} formatter={v => [(v/1024/1024/1024).toFixed(2)+' GB','Volume']} />
               <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize:'12px', color:'#94A3B8' }} />
             </PieChart>
           </ResponsiveContainer>

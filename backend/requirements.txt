@@ -12,3 +12,4 @@ argon2-cffi
 python-multipart
 python-jose[cryptography]
 email-validator
+PyPDF2

@@ -119,7 +119,7 @@ export default function Overview() {
               <Pie data={threats} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={2} dataKey="count" nameKey="category" stroke="none">
                 {threats.map((e, i) => <Cell key={i} fill={THREAT_COLORS[e.category] || '#64748B'} />)}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [v.toLocaleString(), n]} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} formatter={(v, n) => [v.toLocaleString(), n]} />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -131,7 +131,7 @@ export default function Overview() {
               <Pie data={protocols} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={2} dataKey="count" nameKey="protocol" stroke="none">
                 {protocols.map((e, i) => <Cell key={i} fill={['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EC4899', '#6366F1'][i % 6]} />)}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [v.toLocaleString(), n]} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} formatter={(v, n) => [v.toLocaleString(), n]} />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -151,7 +151,7 @@ export default function Overview() {
                   Attack Rate
                 </tspan>
               </text>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [v.toLocaleString(), n]} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} formatter={(v, n) => [v.toLocaleString(), n]} />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -166,7 +166,7 @@ export default function Overview() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
               <XAxis type="number" stroke="var(--text-muted)" fontSize={11} tickFormatter={v => v > 1000 ? `${(v/1000).toFixed(0)}k` : v} />
               <YAxis dataKey="level" type="category" stroke="var(--text-muted)" width={70} fontSize={11} />
-              <Tooltip contentStyle={tooltipStyle} formatter={v => [v.toLocaleString(), 'Events']} cursor={{ fill:'var(--surface-hover)' }} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} formatter={v => [v.toLocaleString(), 'Events']} cursor={{ fill:'var(--surface-hover)' }} />
               <Bar dataKey="count" radius={[0,4,4,0]} barSize={24}>
                 {severity.map((e, i) => <Cell key={i} fill={SEVERITY_COLORS[e.level?.toUpperCase()] || '#64748B'} />)}
               </Bar>
@@ -180,7 +180,7 @@ export default function Overview() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
               <XAxis type="number" stroke="var(--text-muted)" fontSize={11} tickFormatter={v => v > 1000 ? `${(v/1000).toFixed(0)}k` : v} />
               <YAxis dataKey="category" type="category" stroke="var(--text-muted)" width={100} fontSize={11} />
-              <Tooltip contentStyle={tooltipStyle} formatter={v => [v.toLocaleString(), 'Events']} cursor={{ fill:'var(--surface-hover)' }} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} formatter={v => [v.toLocaleString(), 'Events']} cursor={{ fill:'var(--surface-hover)' }} />
               <Bar dataKey="event_count" radius={[0,4,4,0]} barSize={24}>
                 {attackRanking.map((e, i) => <Cell key={i} fill={THREAT_COLORS[e.category] || '#64748B'} />)}
               </Bar>
@@ -240,7 +240,7 @@ export default function Overview() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis type="number" stroke="var(--text-muted)" fontSize={11} hide />
                 <YAxis dataKey="name" type="category" stroke="var(--text-muted)" width={80} fontSize={11} />
-                <Tooltip contentStyle={tooltipStyle} formatter={v => [`${(v*100).toFixed(2)}%`, 'Importance']} cursor={{ fill:'var(--surface-hover)' }} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-primary)' }} formatter={v => [`${(v*100).toFixed(2)}%`, 'Importance']} cursor={{ fill:'var(--surface-hover)' }} />
                 <Bar dataKey="importance" fill="var(--primary)" radius={[0,4,4,0]} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
